@@ -48,6 +48,8 @@ class ReplayMemory:
         self.memory = []
 
     def add(self, state, action, reward, is_gameover, next_state):
+        if len(self.memory) >= config.max_memory_size:
+            self.memory.pop(0)
         self.memory.append((state, action, reward, is_gameover, next_state))
 
     def sample(self, batch_size):
@@ -90,6 +92,7 @@ class Agent:
         replay_memory = ReplayMemory()
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
+        count = 0
         for episode in range(1, config.M+1):
             is_train = len(replay_memory.memory) >= config.start_training_threshold
             # init
@@ -101,7 +104,8 @@ class Agent:
                 frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
 
             while not is_gameover:
-                if not is_train or random.random() <= config.epsilon:
+                prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
+                if not is_train or random.random() <= prob:
                     action = None
                 else:
                     temp_frames = [frame]
@@ -129,3 +133,4 @@ class Agent:
                     optimizer.step()
 
                 frame = next_frame
+                count += 1

@@ -1,3 +1,5 @@
 .idea/
 .fl
 __pycache__
+gameAPI/__pycache__
+.DS_Store
