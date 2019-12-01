@@ -120,6 +120,7 @@ class Agent:
 
                 if is_train:
                     # sampling
+                    count += 1
                     (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(config.sample_size)
                     optimizer.zero_grad()
                     q_t = self.net(frames_to_tensor(next_state_lst))
@@ -132,9 +133,10 @@ class Agent:
                     print("episode: %d, iteration: %d, loss: %.4f, action: %s" % (episode, count, loss, str(action)))
                     optimizer.step()
 
+
                 frame = next_frame
-                count += 1
-                if count % config.save_model_threshold == 0:
+
+                if count % config.save_model_threshold == 0 and config != 0:
                     torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
 
 
