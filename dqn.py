@@ -102,15 +102,19 @@ class Agent:
                 frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
 
             while not is_gameover:
-                prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
-                if not is_train or random.random() <= prob:
+                if not is_train:
                     action = None
                 else:
-                    with torch.no_grad():
-                        temp_frames = [frame]
-                        actions_values = self.net(frames_to_tensor(temp_frames))
-                        max_value, action = torch.max(actions_values, dim=1)
-                        action = convert_idx_to_2_dim_tensor(action[0])
+                    count += 1
+                    prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
+                    if random.random() <= prob:
+                        action = None
+                    else:
+                        with torch.no_grad():
+                            temp_frames = [frame]
+                            actions_values = self.net(frames_to_tensor(temp_frames))
+                            max_value, action = torch.max(actions_values, dim=1)
+                            action = convert_idx_to_2_dim_tensor(action[0])
 
                 next_frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action)
                 if is_gameover:
@@ -120,7 +124,6 @@ class Agent:
 
                 if is_train:
                     # sampling
-                    count += 1
                     (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(config.sample_size)
                     optimizer.zero_grad()
                     q_t = self.net(frames_to_tensor(next_state_lst))
@@ -132,12 +135,10 @@ class Agent:
                     loss.backward()
                     print("episode: %d, iteration: %d, loss: %.4f, action: %s" % (episode, count, loss, str(action)))
                     optimizer.step()
-
+                    if count % config.save_model_threshold == 0 and config != 0:
+                        torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
 
                 frame = next_frame
-
-                if count % config.save_model_threshold == 0 and config != 0:
-                    torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
 
 
     def test(self):
