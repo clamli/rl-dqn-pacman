@@ -122,6 +122,7 @@ class Agent:
                 if is_train:
                     # sampling
                     (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(config.sample_size)
+                    optimizer.zero_grad()
                     q_t = self.net(frames_to_tensor(next_state_lst))
                     q_t = torch.max(q_t, dim=1)[0]
                     loss = mse_loss(
