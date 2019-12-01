@@ -83,6 +83,8 @@ class Agent:
     def __init__(self, net: torch.nn.Module):
         self.game_agent = GamePacmanAgent(config)
         self.net = net
+        if config.use_cuda:
+            self.net = self.net.cuda()
 
     def train(self):
         replay_memory = ReplayMemory()
@@ -123,7 +125,7 @@ class Agent:
                         (self.net(frames_to_tensor(state_lst)) * FloatTensor(action_lst)).sum(1)
                     )
                     loss.backward()
-                    print("loss: %.4f" % loss)
+                    print("episode: %d,  loss: %.4f, " % (episode, loss))
                     optimizer.step()
 
                 frame = next_frame

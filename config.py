@@ -2,6 +2,7 @@ import os
 import torch
 
 '''dqn'''
+on_TACC = False
 M = 10000
 epsilon = 0.1
 sample_size = 32
