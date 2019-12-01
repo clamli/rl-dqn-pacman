@@ -41,6 +41,7 @@ def frames_to_tensor(frames):
 
     return torch.from_numpy(np.concatenate(images_input, 0)).permute(0, 3, 1, 2).type(FloatTensor)
 
+
 def single_frame_to_tensor(frames):
     image = np.concatenate(frames, -1)
     image_input = image.astype(np.float32) / 255.
@@ -111,8 +112,7 @@ class Agent:
                 frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
 
             while True:
-                is_train = len(
-                    replay_memory.memory) >= config.start_training_threshold
+                is_train = count >= config.start_training_threshold
                 if not is_train:
                     action = None
                 else:
