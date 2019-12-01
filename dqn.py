@@ -97,8 +97,6 @@ class Agent:
             is_train = len(replay_memory.memory) >= config.start_training_threshold
             # init
             frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
-            if count % config.save_model_threshold == 0:
-                torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
             while is_gameover:
                 self.game_agent.reset()
                 frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
@@ -108,10 +106,11 @@ class Agent:
                 if not is_train or random.random() <= prob:
                     action = None
                 else:
-                    temp_frames = [frame]
-                    actions_values = self.net(frames_to_tensor(temp_frames))
-                    max_value, action = torch.max(actions_values, 1)
-                    action = convert_idx_to_2_dim_tensor(action[0])
+                    with torch.no_grad():
+                        temp_frames = [frame]
+                        actions_values = self.net(frames_to_tensor(temp_frames))
+                        max_value, action = torch.max(actions_values, dim=1)
+                        action = convert_idx_to_2_dim_tensor(action[0])
 
                 next_frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action)
                 if is_gameover:
@@ -130,8 +129,28 @@ class Agent:
                         (self.net(frames_to_tensor(state_lst)) * FloatTensor(action_lst)).sum(1)
                     )
                     loss.backward()
-                    print("episode: %d,  loss: %.4f, " % (episode, loss))
+                    print("episode: %d, iteration: %d, loss: %.4f, action: %s" % (episode, count, loss, str(action)))
                     optimizer.step()
 
                 frame = next_frame
                 count += 1
+                if count % config.save_model_threshold == 0:
+                    torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
+
+
+    def test(self):
+        action = None
+        while True:
+            frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action)
+            if is_gameover:
+                self.game_agent.reset()
+            if random.random() <= config.eps_end:
+                action = None
+            else:
+                with torch.no_grad():
+                    temp_frames = [frame]
+                    actions_values = self.net(frames_to_tensor(temp_frames))
+                    print(actions_values)
+                    max_value, action = torch.max(actions_values, dim=1)
+                    action = convert_idx_to_2_dim_tensor(action[0])
+            print('[ACTION]: %s' % str(action))
