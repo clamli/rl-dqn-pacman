@@ -97,8 +97,8 @@ class Agent:
             is_train = len(replay_memory.memory) >= config.start_training_threshold
             # init
             frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
-            if episode % config.save_model_threshold == 0:
-                torch.save(self.net.state_dict(), './models/model' + str(episode) + '.pkl')
+            if count % config.save_model_threshold == 0:
+                torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
             while is_gameover:
                 self.game_agent.reset()
                 frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
