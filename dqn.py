@@ -41,6 +41,15 @@ def frames_to_tensor(frames):
 
     return torch.from_numpy(np.concatenate(images_input, 0)).permute(0, 3, 1, 2).type(FloatTensor)
 
+def single_frame_to_tensor(frames):
+    image = np.concatenate(frames, -1)
+    image_input = image.astype(np.float32) / 255.
+    image_input.resize((1, *image_input.shape))
+    image_input_torch = torch.from_numpy(image_input).permute(0, 3, 1, 2).type(
+        FloatTensor)
+
+    return image_input_torch
+
 
 class ReplayMemory:
 
@@ -114,7 +123,7 @@ class Agent:
                     else:
                         with torch.no_grad():
                             temp_frames = [frame]
-                            actions_values = self.net(frames_to_tensor(temp_frames))
+                            actions_values = self.net(single_frame_to_tensor(temp_frames))
                             max_value, action = torch.max(actions_values, dim=1)
                             action = convert_idx_to_2_dim_tensor(action[0])
 
@@ -154,7 +163,7 @@ class Agent:
             else:
                 with torch.no_grad():
                     temp_frames = [frame]
-                    actions_values = self.net(frames_to_tensor(temp_frames))
+                    actions_values = self.net(single_frame_to_tensor(temp_frames))
                     print(actions_values)
                     max_value, action = torch.max(actions_values, dim=1)
                     action = convert_idx_to_2_dim_tensor(action[0])
