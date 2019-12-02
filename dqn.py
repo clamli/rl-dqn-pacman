@@ -111,8 +111,8 @@ class Agent:
                 self.game_agent.reset()
                 frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
 
-            while True:
-                is_train = len(replay_memory.memory) >= config.start_training_threshold
+            while not is_gameover:
+
                 if not is_train:
                     action = None
                 else:
