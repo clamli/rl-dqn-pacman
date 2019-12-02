@@ -162,7 +162,9 @@ class Agent:
                             config.eps_start - config.eps_end) / config.eps_num_steps * num_iter,
                            config.eps_end)
                 print(prob)
-                if random.random() > prob:
+                rand_value = random.random()
+                print("random: %d"%rand_value)
+                if rand_value > prob:
                     with torch.no_grad():
                         image_input = image.astype(np.float32) / 255.
                         image_input.resize((1, *image_input.shape))
