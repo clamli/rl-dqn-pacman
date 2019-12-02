@@ -155,7 +155,7 @@ class Agent:
                     action_pred = None
                 print('[STATE]: training, [ITER]: %d, [LOSS]: %.3f, [ACTION]: %s' % (num_iter, loss.item(), str(action_pred)))
                 if num_iter % config.save_model_threshold == 0:
-                    torch.save(self.net.state_dict(), str(num_iter) + 'pkl')
+                    torch.save(self.net.state_dict(), str(num_iter) + '.pkl')
 
 
 
