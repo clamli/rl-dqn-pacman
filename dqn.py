@@ -161,16 +161,20 @@ class Agent:
                 prob = max(config.eps_start - (
                             config.eps_start - config.eps_end) / config.eps_num_steps * num_iter,
                            config.eps_end)
-                print(prob)
+                # TODO: remove
+                prob = 0
                 rand_value = random.random()
-                print("random: %f"%rand_value)
                 if rand_value > prob:
                     with torch.no_grad():
                         image_input = image.astype(np.float32) / 255.
                         image_input.resize((1, *image_input.shape))
                         image_input_torch = torch.from_numpy(image_input).permute(0, 3, 1, 2).type(FloatTensor)
+                        action_pred = 1
+                        print(action_pred)
                         action_pred = self.net(image_input_torch).view(-1).tolist()
+                        print(action_pred)
                         action_pred = convert_idx_to_2_dim_tensor(action_pred)
+                        print(action_pred)
                         #actions_values = self.net(single_frame_to_tensor(frame))
                         #max_value, action = torch.max(actions_values, dim=1)
                         #action_pred = convert_idx_to_2_dim_tensor(action[0])
