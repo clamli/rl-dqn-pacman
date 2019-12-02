@@ -101,8 +101,9 @@ class Agent:
 
     def train2(self):
         action_pred = None
-        frame = None
-        prev_frame = None
+        image = None
+        image_prev = None
+        frames = []
         replay_memory = ReplayMemory()
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
@@ -112,9 +113,14 @@ class Agent:
 
             if is_gameover:
                 self.game_agent.reset()
-            if prev_frame is not None:
-                replay_memory.add(prev_frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, frame)
-            prev_frame = frame
+            frames.append(frame)
+            if len(frames) == 1:
+                image_prev = image
+                image = np.concatenate(frames, -1)
+                frames.pop(0)
+                if image_prev is not None:
+                    replay_memory.add(image, image_prev, reward, convert_2_dim_tensor_to_4_dim_tensor(action),
+                                      is_gameover)
 
             # explore
             if len(replay_memory.memory) < config.start_training_threshold:
@@ -124,10 +130,22 @@ class Agent:
             else:
                 # --get data
                 num_iter += 1
-                (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(config.sample_size)
+                images_input = []
+                images_prev_input = []
+                image_input_lst, image_prev_input_lst, reward_lst, action_lst, is_gameover_lst = replay_memory.sample(config.sample_size)
+                for i in range(config.sample_size):
+                    image_input = image_input_lst[i].astype(np.float32) / 255.
+                    image_input.resize((1, *image_input.shape))
+                    images_input.append(image_input)
+                    image_prev_input = image_prev_input_lst[i].astype(np.float32) / 255.
+                    image_prev_input.resize((1, *image_prev_input.shape))
+                    images_prev_input.append(image_prev_input)
 
-                images_input_torch = frames_to_tensor(next_state_lst)
-                images_prev_input_torch = frames_to_tensor(state_lst)
+                images_input_torch = torch.from_numpy(np.concatenate(images_input, 0)).permute(0, 3, 1, 2).type(
+                    FloatTensor)
+                images_prev_input_torch = torch.from_numpy(np.concatenate(images_prev_input, 0)).permute(0, 3, 1,
+                                                                                                         2).type(
+                    FloatTensor)
 
                 # --compute loss
                 optimizer.zero_grad()
@@ -145,9 +163,14 @@ class Agent:
                            config.eps_end)
                 if random.random() > prob:
                     with torch.no_grad():
-                        actions_values = self.net(single_frame_to_tensor(frame))
-                        max_value, action = torch.max(actions_values, dim=1)
-                        action_pred = convert_idx_to_2_dim_tensor(action[0])
+                        image_input = image.astype(np.float32) / 255.
+                        image_input.resize((1, *image_input.shape))
+                        image_input_torch = torch.from_numpy(image_input).permute(0, 3, 1, 2).type(FloatTensor)
+                        action_pred = self.net(image_input_torch).view(-1).tolist()
+                        action_pred = convert_idx_to_2_dim_tensor(action_pred)
+                        #actions_values = self.net(single_frame_to_tensor(frame))
+                        #max_value, action = torch.max(actions_values, dim=1)
+                        #action_pred = convert_idx_to_2_dim_tensor(action[0])
                 else:
                     action_pred = None
                 print('[STATE]: training, [ITER]: %d, [LOSS]: %.3f, [ACTION]: %s' % (num_iter, loss.item(), str(action_pred)))
