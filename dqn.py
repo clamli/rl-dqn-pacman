@@ -161,6 +161,7 @@ class Agent:
                 prob = max(config.eps_start - (
                             config.eps_start - config.eps_end) / config.eps_num_steps * num_iter,
                            config.eps_end)
+                print(prob)
                 if random.random() > prob:
                     with torch.no_grad():
                         image_input = image.astype(np.float32) / 255.
@@ -173,6 +174,8 @@ class Agent:
                         #action_pred = convert_idx_to_2_dim_tensor(action[0])
                 else:
                     action_pred = None
+                    print('Become None')
+
                 print('[STATE]: training, [ITER]: %d, [LOSS]: %.3f, [ACTION]: %s' % (num_iter, loss.item(), str(action_pred)))
                 if num_iter % config.save_model_threshold == 0:
                     torch.save(self.net.state_dict(), str(num_iter) + '.pkl')
@@ -243,8 +246,7 @@ class Agent:
                 action = None
             else:
                 with torch.no_grad():
-                    temp_frames = [frame]
-                    actions_values = self.net(single_frame_to_tensor(temp_frames))
+                    actions_values = self.net(single_frame_to_tensor(frame))
                     print(actions_values)
                     max_value, action = torch.max(actions_values, dim=1)
                     action = convert_idx_to_2_dim_tensor(action[0])
