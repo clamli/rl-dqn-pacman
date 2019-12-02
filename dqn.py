@@ -124,9 +124,6 @@ class Agent:
             else:
                 # --get data
                 num_iter += 1
-                is_gameovers = []
-                actions = []
-                rewards = []
                 (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(config.sample_size)
 
                 images_input_torch = frames_to_tensor(next_state_lst)
@@ -137,9 +134,9 @@ class Agent:
                 q_t = self.net(images_input_torch)
                 q_t = torch.max(q_t, dim=1)[0]
                 loss = mse_loss(
-                    torch.Tensor(rewards).type(FloatTensor) + (1 - torch.Tensor(is_gameovers).type(FloatTensor)) * (
+                    torch.Tensor(reward_lst).type(FloatTensor) + (1 - torch.Tensor(is_gameover_lst).type(FloatTensor)) * (
                                 0.95 * q_t),
-                    (self.net(images_prev_input_torch) * torch.Tensor(actions).type(FloatTensor)).sum(1))
+                    (self.net(images_prev_input_torch) * torch.Tensor(action_lst).type(FloatTensor)).sum(1))
                 loss.backward()
                 optimizer.step()
                 # --make decision
