@@ -98,6 +98,70 @@ class Agent:
         if config.use_cuda:
             self.net = self.net.cuda()
 
+
+    def train2(self):
+        action_pred = None
+        image = None
+        replay_memory = ReplayMemory()
+        optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
+        mse_loss = nn.MSELoss(reduction='elementwise_mean')
+        num_iter = 0
+        while True:
+            frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action_pred)
+            if is_gameover:
+                self.game_agent.reset()
+            frames = [frame]
+            image_prev = image
+            image = np.concatenate(frames, -1)
+            exprience = (image, image_prev, reward, convert_2_dim_tensor_to_4_dim_tensor(action), is_gameover)
+            frames.pop(0)
+            if image_prev is not None:
+                replay_memory.add(exprience)
+
+            # explore
+            if len(replay_memory.memory) < config.start_training_threshold:
+                print('[STATE]: explore, [MEMORYLEN]: %d' % len(replay_memory.memory))
+
+                # train
+            else:
+                # --get data
+                num_iter += 1
+                is_gameovers = []
+                actions = []
+                rewards = []
+                (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(config.sample_size)
+
+                images_input_torch = frames_to_tensor(next_state_lst)
+                images_prev_input_torch = frames_to_tensor(state_lst)
+
+                # --compute loss
+                optimizer.zero_grad()
+                q_t = self.net(images_input_torch)
+                q_t = torch.max(q_t, dim=1)[0]
+                loss = mse_loss(
+                    torch.Tensor(rewards).type(FloatTensor) + (1 - torch.Tensor(is_gameovers).type(FloatTensor)) * (
+                                0.95 * q_t),
+                    (self.net(images_prev_input_torch) * torch.Tensor(actions).type(FloatTensor)).sum(1))
+                loss.backward()
+                optimizer.step()
+                # --make decision
+                prob = max(config.eps_start - (
+                            config.eps_start - config.eps_end) / config.eps_num_steps * num_iter,
+                           config.eps_end)
+                if random.random() > prob:
+                    with torch.no_grad():
+                        temp_frames = [frame]
+                        actions_values = self.net(single_frame_to_tensor(temp_frames))
+                        max_value, action = torch.max(actions_values, dim=1)
+                        action_pred = convert_idx_to_2_dim_tensor(action[0])
+                else:
+                    action_pred = None
+                print('[STATE]: training, [ITER]: %d, [LOSS]: %.3f, [ACTION]: %s' % (num_iter, loss.item(), str(action_pred)))
+                if num_iter % config.save_model_threshold == 0:
+                    torch.save(self.net.state_dict(), str(num_iter) + 'pkl')
+
+
+
     def train(self):
         replay_memory = ReplayMemory()
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)

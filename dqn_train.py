@@ -8,7 +8,7 @@ if config.on_TACC:
 def train():
     dqn = DQN(4)
     agent = Agent(dqn)
-    agent.train()
+    agent.train2()
 
 
 if __name__ == '__main__':
