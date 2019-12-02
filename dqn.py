@@ -230,8 +230,7 @@ class Agent:
                         action = None
                     else:
                         with torch.no_grad():
-                            temp_frames = [frame]
-                            actions_values = self.net(single_frame_to_tensor(temp_frames))
+                            actions_values = self.net(single_frame_to_tensor(frame))
                             max_value, action = torch.max(actions_values, dim=1)
                             action = convert_idx_to_2_dim_tensor(action[0])
 
