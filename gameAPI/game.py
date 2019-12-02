@@ -9,6 +9,7 @@ Author:
 import cv2
 import sys
 import random
+random.seed(9001)
 import pygame
 import numpy as np
 from .sprites import *
