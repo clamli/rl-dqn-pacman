@@ -184,8 +184,9 @@ class Agent:
                         image_input = image.astype(np.float32) / 255.
                         image_input.resize((1, *image_input.shape))
                         image_input_torch = torch.from_numpy(image_input).permute(0, 3, 1, 2).type(FloatTensor)
-                        action_pred = self.net(image_input_torch).view(-1).tolist()
-                        action_pred = convert_idx_to_2_dim_tensor(action_pred)
+                        action_pred = self.net(image_input_torch)
+                        max_value, action = torch.max(action_pred, dim=1)
+                        action_pred = convert_idx_to_2_dim_tensor(action[0])
                         #actions_values = self.net(single_frame_to_tensor(frame))
                         #max_value, action = torch.max(actions_values, dim=1)
                         #action_pred = convert_idx_to_2_dim_tensor(action[0])
