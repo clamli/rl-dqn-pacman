@@ -5,6 +5,7 @@ import torch.nn as nn
 import torchvision
 import config
 from gameAPI.game import GamePacmanAgent
+from collections import deque
 
 
 FloatTensor = torch.cuda.FloatTensor if config.use_cuda else torch.FloatTensor
@@ -20,6 +21,8 @@ def convert_idx_to_2_dim_tensor(action):
         return [0, -1]
     elif idx == 3:
         return [0, 1]
+    else:
+        raise RuntimeError('something wrong in DQNAgent.formatAction')
 
 
 def convert_2_dim_tensor_to_4_dim_tensor(action):
@@ -31,6 +34,8 @@ def convert_2_dim_tensor_to_4_dim_tensor(action):
         return [0, 0, 1, 0]
     elif action == [0, 1]:
         return [0, 0, 0, 1]
+    else:
+        raise RuntimeError('something wrong in DQNAgent.formatAction')
 
 
 def frames_to_tensor(frames):
@@ -105,11 +110,13 @@ class Agent:
         image = None
         image_prev = None
         frames = []
-        replay_memory = ReplayMemory()
+        game_memories = deque()
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
         num_iter = 0
         while True:
+            if len(game_memories) > config.max_memory_size:
+                game_memories.popleft()
             frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action_pred)
 
             if is_gameover:
@@ -120,12 +127,12 @@ class Agent:
                 image = np.concatenate(frames, -1)
                 frames.pop(0)
                 if image_prev is not None:
-                    replay_memory.add(image, image_prev, reward, convert_2_dim_tensor_to_4_dim_tensor(action),
-                                      is_gameover)
+                    game_memories.append((image, image_prev, reward, convert_2_dim_tensor_to_4_dim_tensor(action),
+                                      is_gameover))
 
             # explore
-            if len(replay_memory.memory) < config.start_training_threshold:
-                print('[STATE]: explore, [MEMORYLEN]: %d' % len(replay_memory.memory))
+            if len(game_memories) < config.start_training_threshold:
+                print('[STATE]: explore, [MEMORYLEN]: %d' % len(game_memories))
 
             # train
             else:
@@ -133,14 +140,19 @@ class Agent:
                 num_iter += 1
                 images_input = []
                 images_prev_input = []
-                image_input_lst, image_prev_input_lst, reward_lst, action_lst, is_gameover_lst = replay_memory.sample(config.sample_size)
-                for i in range(config.sample_size):
-                    image_input = image_input_lst[i].astype(np.float32) / 255.
+                reward_lst = []
+                action_lst = []
+                is_gameover_lst = []
+                for each in random.sample(game_memories, config.sample_size):
+                    image_input = each[0].astype(np.float32) / 255.
                     image_input.resize((1, *image_input.shape))
                     images_input.append(image_input)
-                    image_prev_input = image_prev_input_lst[i].astype(np.float32) / 255.
+                    image_prev_input = each[1].astype(np.float32) / 255.
                     image_prev_input.resize((1, *image_prev_input.shape))
                     images_prev_input.append(image_prev_input)
+                    reward_lst.append(each[2])
+                    action_lst.append(each[3])
+                    is_gameover_lst.append(each[4])
 
                 images_input_torch = torch.from_numpy(np.concatenate(images_input, 0)).permute(0, 3, 1, 2).type(
                     FloatTensor)
@@ -246,8 +258,8 @@ class Agent:
                 action = None
             else:
                 with torch.no_grad():
-                    actions_values = self.net(single_frame_to_tensor(frame))
+                    actions_values = self.net(single_frame_to_tensor(frame)).view(-1).tolist()
                     print(actions_values)
-                    max_value, action = torch.max(actions_values, dim=1)
-                    action = convert_idx_to_2_dim_tensor(action[0])
+                    # max_value, action = torch.max(actions_values, dim=1)
+                    action = convert_idx_to_2_dim_tensor(actions_values)
             print('[ACTION]: %s' % str(action))
