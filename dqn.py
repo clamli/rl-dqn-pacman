@@ -163,7 +163,7 @@ class Agent:
                            config.eps_end)
                 print(prob)
                 rand_value = random.random()
-                print("random: %d"%rand_value)
+                print("random: %f"%rand_value)
                 if rand_value > prob:
                     with torch.no_grad():
                         image_input = image.astype(np.float32) / 255.
