@@ -101,7 +101,7 @@ class Agent:
 
     def train2(self):
         action_pred = None
-        image = None
+        frames = None
         replay_memory = ReplayMemory()
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
@@ -110,19 +110,16 @@ class Agent:
             frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action_pred)
             if is_gameover:
                 self.game_agent.reset()
+            prev_frames = frames
             frames = [frame]
-            image_prev = image
-            image = np.concatenate(frames, -1)
-            exprience = (image, image_prev, reward, convert_2_dim_tensor_to_4_dim_tensor(action), is_gameover)
-            frames.pop(0)
-            if image_prev is not None:
-                replay_memory.add(exprience)
+            if prev_frames is not None:
+                replay_memory.add(prev_frames, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, frames)
 
             # explore
             if len(replay_memory.memory) < config.start_training_threshold:
                 print('[STATE]: explore, [MEMORYLEN]: %d' % len(replay_memory.memory))
 
-                # train
+            # train
             else:
                 # --get data
                 num_iter += 1
