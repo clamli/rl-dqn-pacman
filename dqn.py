@@ -236,6 +236,7 @@ class Agent:
 
                 next_frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action)
                 if is_gameover:
+                    print("reset")
                     self.game_agent.reset()
 
                 replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
@@ -252,7 +253,7 @@ class Agent:
                     loss.backward()
                     print("episode: %d, iteration: %d, loss: %.4f, action: %s" % (episode, count, loss, str(action)))
                     optimizer.step()
-                    if count % config.save_model_threshold == 0 and config != 0:
+                    if count % config.save_model_threshold == 0:
                         torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
 
                 frame = next_frame
