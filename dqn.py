@@ -191,7 +191,7 @@ class Agent:
                                 0.95 * q_t),
                     (self.net(images_prev_input_torch) * torch.Tensor(action_lst).type(FloatTensor)).sum(1))
                 loss.backward()
-                loss_lst.append(loss.data[0])
+                loss_lst.append(torch.Tensor.item(loss))
                 optimizer.step()
                 # --make decision
                 prob = max(config.eps_start - (
@@ -286,7 +286,7 @@ class Agent:
                         (self.net(frames_to_tensor(state_lst)) * FloatTensor(action_lst)).sum(1)
                     )
                     loss.backward()
-                    loss_lst.append(loss.data[0])
+                    loss_lst.append(torch.Tensor.item(loss))
                     print("episode: %d, iteration: %d, loss: %.4f, action: %s" % (episode, count, loss, str(action)))
                     optimizer.step()
                     if count % config.save_model_threshold == 0:
