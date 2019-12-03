@@ -7,8 +7,8 @@ import config
 from gameAPI.game import GamePacmanAgent
 from collections import deque
 
-torch.manual_seed(9001)
-random.seed(9001)
+# torch.manual_seed(9001)
+# random.seed(9001)
 
 
 FloatTensor = torch.cuda.FloatTensor if config.use_cuda else torch.FloatTensor

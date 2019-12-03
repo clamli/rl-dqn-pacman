@@ -4,7 +4,7 @@ from dqn import Agent, DQN
 
 def runDemo():
     dqn = DQN(4)
-    dqn.load_state_dict(torch.load("./10000_target.pkl"))
+    dqn.load_state_dict(torch.load("./540000.pkl"))
     agent = Agent(dqn)
     agent.test()
 
