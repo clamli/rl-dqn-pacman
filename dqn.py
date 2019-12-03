@@ -6,6 +6,7 @@ import torchvision
 import config
 from gameAPI.game import GamePacmanAgent
 from collections import deque
+import pickle
 
 # torch.manual_seed(9001)
 # random.seed(9001)
@@ -63,6 +64,11 @@ def single_frame_to_tensor(frame):
     return image_input_torch
 
 
+def save_data(data, filename):
+    with open(filename, 'wb') as file:
+        pickle.dump(data, file)
+
+
 class ReplayMemory:
 
     def __init__(self):
@@ -118,13 +124,25 @@ class Agent:
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
         num_iter = 0
+        num_games = 0
+        num_wins = 0
+        num_games_lst = []
+        num_wins_lst = []
+        score_lst = []
+        loss_lst = []
         while True:
             if len(game_memories) > config.max_memory_size:
                 game_memories.popleft()
             frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action_pred)
+            score_lst.append(self.game_agent.score)
 
             if is_gameover:
                 self.game_agent.reset()
+                if len(game_memories) >= config.start_training_threshold:
+                    num_games += 1
+                    num_wins += int(is_win)
+                    num_games_lst.append(num_games)
+                    num_wins_lst.append(num_wins)
             frames.append(frame)
             if len(frames) == 1:
                 image_prev = image
@@ -173,6 +191,7 @@ class Agent:
                                 0.95 * q_t),
                     (self.net(images_prev_input_torch) * torch.Tensor(action_lst).type(FloatTensor)).sum(1))
                 loss.backward()
+                loss_lst.append(loss.data[0])
                 optimizer.step()
                 # --make decision
                 prob = max(config.eps_start - (
@@ -196,6 +215,11 @@ class Agent:
                 print('[STATE]: training, [ITER]: %d, [LOSS]: %.3f, [ACTION]: %s' % (num_iter, loss.item(), str(action_pred)))
                 if num_iter % config.save_model_threshold == 0:
                     torch.save(self.net.state_dict(), str(num_iter) + '.pkl')
+                    save_data({"num_games_lst": num_games_lst,
+                               "num_wins_lst": num_wins_lst,
+                               "loss_lst": loss_lst, "score_lst": score_lst},
+                              "result" + str(num_iter))
+
 
 
 
@@ -204,6 +228,12 @@ class Agent:
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
         count = 0
+        num_games = 0
+        num_wins = 0
+        num_games_lst = []
+        num_wins_lst = []
+        loss_lst = []
+        score_lst = []
         for episode in range(1, config.M+1):
             # init
             frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
@@ -235,9 +265,14 @@ class Agent:
                             action = convert_idx_to_2_dim_tensor(action[0])
 
                 next_frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action)
+                score_lst.append(self.game_agent.score)
                 if is_gameover:
-                    print("reset")
                     self.game_agent.reset()
+                    if len(replay_memory.memory) >= config.start_training_threshold:
+                        num_games += 1
+                        num_wins += int(is_win)
+                        num_games_lst.append(num_games)
+                        num_wins_lst.append(num_wins)
 
                 replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
 
@@ -251,10 +286,12 @@ class Agent:
                         (self.net(frames_to_tensor(state_lst)) * FloatTensor(action_lst)).sum(1)
                     )
                     loss.backward()
+                    loss_lst.append(loss.data[0])
                     print("episode: %d, iteration: %d, loss: %.4f, action: %s" % (episode, count, loss, str(action)))
                     optimizer.step()
                     if count % config.save_model_threshold == 0:
                         torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
+                        save_data({"num_games_lst": num_games_lst, "num_wins_lst": num_wins_lst, "loss_lst": loss_lst, "score_lst": score_lst}, "result" + str(count))
 
                 frame = next_frame
 
