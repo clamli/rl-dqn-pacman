@@ -300,7 +300,7 @@ class Agent:
                     if config.use_per:
                         v_s = torch.max(q_t, dim=1)[0]
                         v_s_p = torch.max(q_t_p, dim=1)[0]
-                        td_errors = abs(config.gamma * v_s_p + torch.FloatTensor(reward_lst) - v_s)
+                        td_errors = abs(config.gamma * v_s_p + FloatTensor(reward_lst) - v_s)
                         for position, error in zip(position_lst, td_errors):
                             replay_memory.update(position, error)
                     q_t_p = torch.max(q_t_p, dim=1)[0]
