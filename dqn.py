@@ -258,10 +258,6 @@ class Agent:
 
                     (position_lst, state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(
                         config.sample_size)
-                    if config.use_per:
-                        td_errors = [self.get_td_error(frame, reward, next_frame) for frame, action, reward, next_frame in zip(state_lst, action_lst, reward_lst, next_state_lst)]
-                        for position, error in zip(position_lst, td_errors):
-                            replay_memory.update(position, error)
 
                     prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
                     random_value = random.random()
@@ -290,16 +286,16 @@ class Agent:
                 else:
                     live_time += 1
 
-                if config.use_per:
-                    td_error = self.get_td_error(frame, reward, next_frame)
-                    replay_memory.add(td_error, frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
-                else:
-                    replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
+                replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
 
                 if is_train:
                     # sampling
                     optimizer.zero_grad()
                     q_t = self.net(frames_to_tensor(next_state_lst))
+                    # if config.use_per:
+                    #     td_errors = [self.get_td_error(frame, reward, next_frame) for frame, action, reward, next_frame in zip(state_lst, action_lst, reward_lst, next_state_lst)]
+                    for position, error in zip(position_lst, td_errors):
+                        replay_memory.update(position, error)
                     q_t = torch.max(q_t, dim=1)[0]
                     loss = mse_loss(
                         FloatTensor(reward_lst) + (1 - FloatTensor(is_gameover_lst)) * (config.gamma * q_t),
@@ -332,8 +328,6 @@ class Agent:
             else:
                 with torch.no_grad():
                     actions_values = self.net(single_frame_to_tensor(frame))
-                    print(actions_values)
                     max_value, action = torch.max(actions_values, dim=1)
-                    print(action)
                     action = convert_idx_to_2_dim_tensor(action)
-            print('[ACTION]: %s' % str(action))
+            print('[ACTION]: %s, [SCORE]: %d' % (str(action), self.game_agent.score))
