@@ -6,7 +6,11 @@ import torchvision
 import config
 from gameAPI.game import GamePacmanAgent
 from collections import deque
+from PIL import Image
 import pickle
+from skimage.transform import resize
+import cv2
+from torchvision import transforms
 
 # torch.manual_seed(9001)
 # random.seed(9001)
@@ -46,16 +50,33 @@ def convert_2_dim_tensor_to_4_dim_tensor(action):
 def frames_to_tensor(frames):
     images_input = []
     for frame in frames:
-        image = np.concatenate([frame], -1)
+        #img = Image.fromarray(frame, 'RGB')
+        #b, g, r = img.split()
+        #im = Image.merge("RGB", (r, g, b))
+        #im.show()
+
+        if config.use_simple:
+            image = np.dot(frame[..., :3], [0.114, 0.587, 0.299])
+            image = resize(image, (80, 80, 1))
+        else:
+            image = np.concatenate([frame], -1)
+
+
         image_input = image.astype(np.float32) / 255.
         image_input.resize((1, *image_input.shape))
         images_input.append(image_input)
+        t = torch.from_numpy(np.concatenate(images_input, 0))
+        s = 0
 
     return torch.from_numpy(np.concatenate(images_input, 0)).permute(0, 3, 1, 2).type(FloatTensor)
 
 
 def single_frame_to_tensor(frame):
-    image = np.concatenate([frame], -1)
+    if config.use_simple:
+        image = np.dot(frame[..., :3], [0.114, 0.587, 0.299])
+        image = resize(image, (80, 80, 1))
+    else:
+        image = np.concatenate([frame], -1)
     image_input = image.astype(np.float32) / 255.
     image_input.resize((1, *image_input.shape))
     image_input_torch = torch.from_numpy(image_input).permute(0, 3, 1, 2).type(
@@ -79,7 +100,7 @@ class ReplayMemory:
             self.memory.pop(0)
         self.memory.append((state, action, reward, is_gameover, next_state))
 
-    def sample(self, batch_size):
+    def uniform_sample(self, batch_size):
         rand_ind = random.sample(range(0, len(self.memory)), min(batch_size, len(self.memory)))
         state_lst = [self.memory[i][0] for i in rand_ind]
         action_lst = [self.memory[i][1] for i in rand_ind]
@@ -96,8 +117,11 @@ class DQN(torch.nn.Module):
         #self.model.classifier[6] = nn.Linear(4096, num_actions)
 
         self.resnet18 = torchvision.models.resnet18()
+        in_ch = 3
+        if config.use_simple:
+            in_ch = 1
         self.resnet18.conv1 = nn.Conv2d(
-            in_channels=3, out_channels=64,
+            in_channels=in_ch, out_channels=64,
             kernel_size=7, stride=2, padding=3, bias=False)
         self.resnet18.fc = nn.Linear(in_features=512, out_features=4)
 
@@ -118,7 +142,6 @@ class Agent:
     def train2(self):
         action_pred = None
         image = None
-        image_prev = None
         frames = []
         game_memories = deque()
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
@@ -225,7 +248,10 @@ class Agent:
 
     def train(self):
         replay_memory = ReplayMemory()
-        optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
+        if config.use_simple:
+            optimizer = torch.optim.Adam(self.net.parameters())
+        else:
+            optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
         count = 0
         num_games = 0
@@ -252,7 +278,7 @@ class Agent:
                     action = None
                 else:
                     count += 1
-                    (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(
+                    (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.uniform_sample(
                         config.sample_size)
                     prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
                     random_value = random.random()

@@ -9,11 +9,12 @@ sample_size = 32
 use_cuda = False
 gamma = 0.95
 start_training_threshold = 5000
-save_model_threshold = 60000
+save_model_threshold = 10000
 max_memory_size = 100000
 eps_start = 1.0
 eps_end = 0.1
 eps_num_steps = 10000
+use_simple = True
 
 '''game'''
 BLACK = (0, 0, 0)
