@@ -1,5 +1,5 @@
 from dqn import Agent, DQN
-import torch
+# import torch
 # torch.manual_seed(9001)
 import os
 import config
