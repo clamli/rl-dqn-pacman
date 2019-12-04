@@ -289,6 +289,9 @@ class Agent:
                 replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
 
                 if is_train:
+                    # v_s = torch.max(self.net(single_frame_to_tensor(frame))).item()
+                    # v_s_p_1 = torch.max(self.net(single_frame_to_tensor(next_frame))).item()
+                    # return abs(config.gamma * v_s_p_1 + reward - v_s)
                     # sampling
                     optimizer.zero_grad()
                     q_t = self.net(frames_to_tensor(next_state_lst))
