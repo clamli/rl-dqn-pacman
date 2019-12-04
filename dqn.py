@@ -260,7 +260,7 @@ class Agent:
                         for position, error in zip(position_lst, td_errors):
                             replay_memory.update(position, error)
 
-                    prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * game_round, config.eps_end)
+                    prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
                     random_value = random.random()
                     if random_value <= prob:
                         action = None
