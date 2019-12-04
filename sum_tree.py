@@ -12,6 +12,9 @@ class SumTree:
         self.transitions = np.zeros(memory_size, dtype=object)
         self.cur_position = 0
 
+    def __len__(self):
+        return self.cur_position
+
     def add(self, p, transition):
         cur_tree_position = self.cur_position + self.memory_size - 1
         self.transitions[self.cur_position] = transition
