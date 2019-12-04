@@ -11,15 +11,17 @@ class SumTree:
         self.tree = np.zeros(2*memory_size - 1)
         self.transitions = np.zeros(memory_size, dtype=object)
         self.cur_position = 0
+        self.size = 0
 
     def __len__(self):
-        return self.cur_position
+        return self.size if self.size <= self.memory_size else self.memory_size
 
     def add(self, p, transition):
         cur_tree_position = self.cur_position + self.memory_size - 1
         self.transitions[self.cur_position] = transition
         self.update(cur_tree_position, p)
         self.cur_position += 1
+        self.size += 1
         if self.cur_position >= self.memory_size:
             self.cur_position = 0
 
@@ -40,7 +42,7 @@ class SumTree:
             if v <= self.tree[left_tree_position]:
                 cur_tree_position = left_tree_position
             else:
-                v -= self.tree[right_tree_position]
+                v -= self.tree[left_tree_position]
                 cur_tree_position = right_tree_position
         cur_position = cur_tree_position - self.memory_size + 1
         return cur_tree_position, self.tree[cur_tree_position], self.transitions[cur_position]

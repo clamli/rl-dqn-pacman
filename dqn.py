@@ -46,7 +46,7 @@ class PrioritizedReplayMemory:
         self.memory = SumTree(memory_size)
 
     def add(self, state, action, reward, is_gameover, next_state):
-        p = np.max(self.memory.tree[-self.memory.tree.memory_size])
+        p = np.max(self.memory.tree[-self.memory.memory_size])
         if p == 0:
             p = self.abs_err_upper
         transition = (state, action, reward, is_gameover, next_state)
@@ -213,14 +213,14 @@ class Agent:
     #                           "result" + str(num_iter))
 
 
-    def get_td_error(self, frame, reward, next_frame):
-        v_s = torch.max(self.net(single_frame_to_tensor(frame))).item()
-        v_s_p_1 = torch.max(self.net(single_frame_to_tensor(next_frame))).item()
-        return abs(config.gamma * v_s_p_1 + reward - v_s)
+    #def get_td_error(self, frame, reward, next_frame):
+    #    v_s = torch.max(self.net(single_frame_to_tensor(frame))).item()
+    #    v_s_p_1 = torch.max(self.net(single_frame_to_tensor(next_frame))).item()
+    #    return abs(config.gamma * v_s_p_1 + reward - v_s)
 
     def train(self):
         if config.use_per:
-            replay_memory = PrioritizedReplayMemory(config.sample_size)
+            replay_memory = PrioritizedReplayMemory(config.max_memory_size)
         else:
             replay_memory = ReplayMemory()
         if config.use_simple:
@@ -250,6 +250,7 @@ class Agent:
                 reward_lst = []
                 is_gameover_lst = []
                 next_state_lst = []
+                position_lst = []
                 is_train = len(replay_memory.memory) >= config.start_training_threshold
                 if not is_train:
                     action = None
@@ -294,15 +295,18 @@ class Agent:
                     # return abs(config.gamma * v_s_p_1 + reward - v_s)
                     # sampling
                     optimizer.zero_grad()
-                    q_t = self.net(frames_to_tensor(next_state_lst))
-                    # if config.use_per:
-                    #     td_errors = [self.get_td_error(frame, reward, next_frame) for frame, action, reward, next_frame in zip(state_lst, action_lst, reward_lst, next_state_lst)]
-                    for position, error in zip(position_lst, td_errors):
-                        replay_memory.update(position, error)
-                    q_t = torch.max(q_t, dim=1)[0]
+                    q_t = self.net(frames_to_tensor(state_lst))
+                    q_t_p = self.net(frames_to_tensor(next_state_lst))
+                    if config.use_per:
+                        v_s = torch.max(q_t)
+                        v_s_p = torch.max(q_t_p)
+                        td_errors = abs(config.gamma * v_s_p + reward - v_s)
+                        for position, error in zip(position_lst, td_errors):
+                            replay_memory.update(position, error)
+                    q_t_p = torch.max(q_t_p, dim=1)[0]
                     loss = mse_loss(
-                        FloatTensor(reward_lst) + (1 - FloatTensor(is_gameover_lst)) * (config.gamma * q_t),
-                        (self.net(frames_to_tensor(state_lst)) * FloatTensor(action_lst)).sum(1)
+                        FloatTensor(reward_lst) + (1 - FloatTensor(is_gameover_lst)) * (config.gamma * q_t_p),
+                        (q_t * FloatTensor(action_lst)).sum(1)
                     )
                     loss.backward()
                     loss_lst.append(torch.Tensor.item(loss))
