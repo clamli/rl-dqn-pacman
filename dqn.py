@@ -289,9 +289,11 @@ class Agent:
                 else:
                     live_time += 1
 
-                td_error = self.get_td_error(frame, reward, next_frame)
-
-                replay_memory.add(td_error, frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
+                if config.use_per:
+                    td_error = self.get_td_error(frame, reward, next_frame)
+                    replay_memory.add(td_error, frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
+                else:
+                    replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
 
                 if is_train:
                     # sampling
