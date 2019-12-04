@@ -40,13 +40,16 @@ class ReplayMemory:
 class PrioritizedReplayMemory:
     e = 0.01
     a = 0.6
+    abs_err_upper = 1.
 
     def __init__(self, memory_size):
         self.memory = SumTree(memory_size)
 
-    def add(self, error, state, action, reward, is_gameover, next_state):
+    def add(self, state, action, reward, is_gameover, next_state):
+        p = np.max(self.memory.tree[-self.memory.tree.memory_size])
+        if p == 0:
+            p = self.abs_err_upper
         transition = (state, action, reward, is_gameover, next_state)
-        p = (error + self.e) ** self.a
         self.memory.add(p, transition)
 
     def update(self, position, error):
@@ -305,7 +308,10 @@ class Agent:
                     loss.backward()
                     loss_lst.append(torch.Tensor.item(loss))
 
-                    print("episode: %d, game round: %d, live_time: %d, iteration: %d, loss: %.4f, action: %s, current game score: %d" % (episode, game_round, live_time, count, loss, str(action), self.game_agent.score))
+                    prob = max(config.eps_start - (
+                                config.eps_start - config.eps_end) / config.eps_num_steps * count,
+                               config.eps_end)
+                    print("episode: %d, game round: %d, live_time: %d, iteration: %d, loss: %.4f, action: %s, current game score: %d, prob %f" % (episode, game_round, live_time, count, loss, str(action), self.game_agent.score, prob))
 
                     optimizer.step()
                     if count % config.save_model_threshold == 0:
