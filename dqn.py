@@ -46,7 +46,9 @@ class PrioritizedReplayMemory:
 
     def add(self, error, state, action, reward, is_gameover, next_state):
         transition = (state, action, reward, is_gameover, next_state)
+
         p = (error + self.e) ** self.a
+
         self.memory.add(p, transition)
 
     def update(self, position, error):
@@ -210,10 +212,10 @@ class Agent:
     #                           "result" + str(num_iter))
 
 
-    def get_td_error(self, frame, action, reward, next_frame):
+    def get_td_error(self, frame, reward, next_frame):
         v_s = torch.max(self.net(single_frame_to_tensor(frame))).item()
         v_s_p_1 = torch.max(self.net(single_frame_to_tensor(next_frame))).item()
-        return config.gamma * v_s_p_1 + reward - v_s
+        return abs(config.gamma * v_s_p_1 + reward - v_s)
 
     def train(self):
         if config.use_per:
@@ -256,9 +258,10 @@ class Agent:
                     (position_lst, state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(
                         config.sample_size)
                     if config.use_per:
-                        td_errors = [self.get_td_error(frame, action, reward, next_frame) for frame, action, reward, next_frame in zip(state_lst, action_lst, reward_lst, next_state_lst)]
+                        td_errors = [self.get_td_error(frame, reward, next_frame) for frame, action, reward, next_frame in zip(state_lst, action_lst, reward_lst, next_state_lst)]
                         for position, error in zip(position_lst, td_errors):
                             replay_memory.update(position, error)
+
                     prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
                     random_value = random.random()
                     if random_value <= prob:
@@ -286,8 +289,9 @@ class Agent:
                 else:
                     live_time += 1
 
+                td_error = self.get_td_error(frame, reward, next_frame)
 
-                replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
+                replay_memory.add(td_error, frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
 
                 if is_train:
                     # sampling
