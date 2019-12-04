@@ -8,7 +8,7 @@ if config.on_TACC:
 
 def runDemo():
     dqn = DQN(4)
-    dqn.load_state_dict(torch.load("./340000.pkl", map_location=lambda storage, loc: storage))
+    dqn.load_state_dict(torch.load("./80000.pkl", map_location=lambda storage, loc: storage))
     agent = Agent(dqn)
     agent.test()
 

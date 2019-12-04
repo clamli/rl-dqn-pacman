@@ -36,9 +36,9 @@ class SumTree:
         cur_tree_position = 0
         while True:
             left_tree_position = 2 * cur_tree_position + 1
+            right_tree_position = left_tree_position + 1
             if left_tree_position >= len(self.tree):
                 break
-            right_tree_position = left_tree_position + 1
             if v <= self.tree[left_tree_position]:
                 cur_tree_position = left_tree_position
             else:
