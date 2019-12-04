@@ -2,4 +2,7 @@
 .fl
 __pycache__
 gameAPI/__pycache__
+/gameAPI/__pycache__
 .DS_Store
+*.pkl
+config.py
