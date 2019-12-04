@@ -301,7 +301,7 @@ class Agent:
                     loss.backward()
                     loss_lst.append(torch.Tensor.item(loss))
 
-                    print("episode: %d, game round: %d, live_time: %d, iteration: %d, loss: %.4f, action: %s" % (episode, game_round, live_time, count, loss, str(action)))
+                    print("episode: %d, game round: %d, live_time: %d, iteration: %d, loss: %.4f, action: %s, current game score: %d" % (episode, game_round, live_time, count, loss, str(action), self.game_agent.score))
 
                     optimizer.step()
                     if count % config.save_model_threshold == 0:
