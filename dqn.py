@@ -6,88 +6,15 @@ import torchvision
 import config
 from gameAPI.game import GamePacmanAgent
 from collections import deque
-from PIL import Image
-import pickle
-from skimage.transform import resize
-import cv2
-from torchvision import transforms
+
+from sum_tree import SumTree
+from utils import convert_idx_to_2_dim_tensor, convert_2_dim_tensor_to_4_dim_tensor, frames_to_tensor, single_frame_to_tensor, save_data
 
 # torch.manual_seed(9001)
 # random.seed(9001)
 
 
 FloatTensor = torch.cuda.FloatTensor if config.use_cuda else torch.FloatTensor
-
-
-def convert_idx_to_2_dim_tensor(action):
-    # idx = action.index(max(action))
-    idx = action
-    if idx == 0:
-        return [-1, 0]
-    elif idx == 1:
-        return [1, 0]
-    elif idx == 2:
-        return [0, -1]
-    elif idx == 3:
-        return [0, 1]
-    else:
-        raise RuntimeError('something wrong in DQNAgent.formatAction')
-
-
-def convert_2_dim_tensor_to_4_dim_tensor(action):
-    if action == [-1, 0]:
-        return [1, 0, 0, 0]
-    elif action == [1, 0]:
-        return [0, 1, 0, 0]
-    elif action == [0, -1]:
-        return [0, 0, 1, 0]
-    elif action == [0, 1]:
-        return [0, 0, 0, 1]
-    else:
-        raise RuntimeError('something wrong in DQNAgent.formatAction')
-
-
-def frames_to_tensor(frames):
-    images_input = []
-    for frame in frames:
-        #img = Image.fromarray(frame, 'RGB')
-        #b, g, r = img.split()
-        #im = Image.merge("RGB", (r, g, b))
-        #im.show()
-
-        if config.use_simple:
-            image = np.dot(frame[..., :3], [0.114, 0.587, 0.299])
-            image = resize(image, (80, 80, 1))
-        else:
-            image = np.concatenate([frame], -1)
-
-
-        image_input = image.astype(np.float32) / 255.
-        image_input.resize((1, *image_input.shape))
-        images_input.append(image_input)
-        t = torch.from_numpy(np.concatenate(images_input, 0))
-        s = 0
-
-    return torch.from_numpy(np.concatenate(images_input, 0)).permute(0, 3, 1, 2).type(FloatTensor)
-
-
-def single_frame_to_tensor(frame):
-    if config.use_simple:
-        image = np.dot(frame[..., :3], [0.114, 0.587, 0.299])
-        image = resize(image, (80, 80, 1))
-    else:
-        image = np.concatenate([frame], -1)
-    image_input = image.astype(np.float32) / 255.
-    image_input.resize((1, *image_input.shape))
-    image_input_torch = torch.from_numpy(image_input).permute(0, 3, 1, 2).type(
-        FloatTensor)
-
-    return image_input_torch
-
-
-def save_data(data, filename):
-    with open(filename, 'wb') as file:
-        pickle.dump(data, file)
 
 
 class ReplayMemory:
@@ -100,14 +27,52 @@ class ReplayMemory:
             self.memory.pop(0)
         self.memory.append((state, action, reward, is_gameover, next_state))
 
-    def uniform_sample(self, batch_size):
+    def sample(self, batch_size):
         rand_ind = random.sample(range(0, len(self.memory)), min(batch_size, len(self.memory)))
         state_lst = [self.memory[i][0] for i in rand_ind]
         action_lst = [self.memory[i][1] for i in rand_ind]
         reward_lst = [self.memory[i][2] for i in rand_ind]
         is_gameover_lst = [self.memory[i][3] for i in rand_ind]
         next_state_lst = [self.memory[i][4] for i in rand_ind]
-        return state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst
+        return [], state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst
+
+
+class PrioritizedReplayMemory:
+    e = 0.01
+    a = 0.6
+
+    def __init__(self, memory_size):
+        self.memory = SumTree(memory_size)
+
+    def add(self, error, state, action, reward, is_gameover, next_state):
+        transition = (state, action, reward, is_gameover, next_state)
+        p = (error + self.e) ** self.a
+        self.memory.add(p, transition)
+
+    def update(self, position, error):
+        p = (error + self.e) ** self.a
+        self.memory.update(position, p)
+
+    def sample(self, sample_size):
+        state_lst = []
+        action_lst = []
+        reward_lst = []
+        is_gameover_lst = []
+        next_state_lst = []
+        positions_lst = []
+        segment = self.memory.total() / sample_size
+        for i in range(sample_size):
+            a = segment * i
+            b = segment * (i+1)
+            s = random.uniform(a, b)
+            position, _, data = self.memory.get(s)
+            positions_lst.append(position)
+            state_lst.append(data[0])
+            action_lst.append(data[1])
+            reward_lst.append(data[2])
+            is_gameover_lst.append(data[3])
+            next_state_lst.append(data[4])
+        return positions_lst, state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst
 
 
 class DQN(torch.nn.Module):
@@ -145,6 +110,7 @@ class Agent:
         frames = []
         game_memories = deque()
         optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
+
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
         num_iter = 0
         num_games = 0
@@ -244,10 +210,16 @@ class Agent:
                               "result" + str(num_iter))
 
 
-
+    def get_td_error(self, frame, action, reward, next_frame):
+        v_s = torch.max(self.net(single_frame_to_tensor(frame))).item()
+        v_s_p_1 = torch.max(self.net(single_frame_to_tensor(next_frame))).item()
+        return config.gamma * v_s_p_1 + reward - v_s
 
     def train(self):
-        replay_memory = ReplayMemory()
+        if config.use_per:
+            replay_memory = PrioritizedReplayMemory()
+        else:
+            replay_memory = ReplayMemory()
         if config.use_simple:
             optimizer = torch.optim.Adam(self.net.parameters())
         else:
@@ -260,6 +232,8 @@ class Agent:
         num_wins_lst = []
         loss_lst = []
         score_lst = []
+        game_round = 1
+        live_time = 0
         for episode in range(1, config.M+1):
             # init
             frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=None)
@@ -278,8 +252,13 @@ class Agent:
                     action = None
                 else:
                     count += 1
-                    (state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.uniform_sample(
+
+                    (position_lst, state_lst, action_lst, reward_lst, is_gameover_lst, next_state_lst) = replay_memory.sample(
                         config.sample_size)
+                    if config.use_per:
+                        td_errors = [self.get_td_error(frame, action, reward, next_frame) for frame, action, reward, next_frame in zip(state_lst, action_lst, reward_lst, next_state_lst)]
+                        for position, error in zip(position_lst, td_errors):
+                            replay_memory.update(position, error)
                     prob = max(config.eps_start - (config.eps_start - config.eps_end) / config.eps_num_steps * count, config.eps_end)
                     random_value = random.random()
                     if random_value <= prob:
@@ -294,11 +273,19 @@ class Agent:
                 score_lst.append(self.game_agent.score)
                 if is_gameover:
                     self.game_agent.reset()
+
+                    game_round += 1
+                    live_time = 0
+
                     if len(replay_memory.memory) >= config.start_training_threshold:
                         num_games += 1
                         num_wins += int(is_win)
                         num_games_lst.append(num_games)
                         num_wins_lst.append(num_wins)
+
+                else:
+                    live_time += 1
+
 
                 replay_memory.add(frame, convert_2_dim_tensor_to_4_dim_tensor(action), reward, is_gameover, next_frame)
 
@@ -313,7 +300,9 @@ class Agent:
                     )
                     loss.backward()
                     loss_lst.append(torch.Tensor.item(loss))
-                    print("episode: %d, iteration: %d, loss: %.4f, action: %s" % (episode, count, loss, str(action)))
+
+                    print("episode: %d, game round: %d, live_time: %d, iteration: %d, loss: %.4f, action: %s" % (episode, game_round, live_time, count, loss, str(action)))
+
                     optimizer.step()
                     if count % config.save_model_threshold == 0:
                         torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
