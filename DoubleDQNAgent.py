@@ -83,7 +83,7 @@ class DoubleDQNAgent:
 
                 next_frame, is_win, is_gameover, reward, action = self.game_agent.nextFrame(action=action)
                 score_lst.append(self.game_agent.score)
-                if is_gameover:
+                if is_gameover or live_time >= config.timeout:
                     self.game_agent.reset()
 
                     game_round += 1
