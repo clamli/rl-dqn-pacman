@@ -45,6 +45,7 @@ class SumTree:
                 v -= self.tree[left_tree_position]
                 cur_tree_position = right_tree_position
         cur_position = cur_tree_position - self.memory_size + 1
+        print("cur_position: %d, self.cur_position: %d"%(cur_position, self.cur_position))
         return cur_tree_position, self.tree[cur_tree_position], self.transitions[cur_position]
 
     def total(self):
