@@ -16,16 +16,15 @@ FloatTensor = torch.cuda.FloatTensor if config.use_cuda else torch.FloatTensor
 
 class DoubleDQNAgent:
 
-    def __init__(self, net: torch.nn.Module, foldname):
+    def __init__(self, net: torch.nn.Module):
         self.game_agent = GamePacmanAgent(config)
         self.net = net
         if config.use_cuda:
             self.net = self.net.cuda()
-        self.foldname = foldname
+
+    def train(self, foldname):
         if not os.path.exists(foldname):
             os.mkdir(foldname)
-
-    def train(self):
         copy_net = type(self.net)()
         copy_net.load_state_dict(self.net.state_dict())
         if config.use_per:
@@ -137,9 +136,9 @@ class DoubleDQNAgent:
 
                     optimizer.step()
                     if count % config.save_model_threshold == 0:
-                        torch.save(self.net.state_dict(), './' + self.foldname + '/model' + str(count) + '.pkl')
+                        torch.save(self.net.state_dict(), './' + foldname + '/model' + str(count) + '.pkl')
                         save_data({"num_games_lst": num_games_lst, "num_wins_lst": num_wins_lst, "loss_lst": loss_lst,
-                                   "score_lst": score_lst}, './' + self.foldname + "/result" + str(count))
+                                   "score_lst": score_lst}, './' + foldname + "/result" + str(count))
 
                 frame = next_frame
 
