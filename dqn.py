@@ -40,6 +40,7 @@ class ReplayMemory:
 class PrioritizedReplayMemory:
     e = 0.01
     a = 0.6
+    epsilon = 0.01
     abs_err_upper = 1.
 
     def __init__(self, memory_size):
@@ -53,7 +54,9 @@ class PrioritizedReplayMemory:
         self.memory.add(p, transition)
 
     def update(self, position, error):
-        p = (error + self.e) ** self.a
+        error += self.epsilon
+        error = min(error, self.abs_err_upper)
+        p = error ** self.a
         self.memory.update(position, p)
 
     def sample(self, sample_size):
