@@ -26,7 +26,7 @@ class DoubleDQNAgent:
             os.mkdir(foldname)
 
     def train(self):
-        copy_net = type(self.net)(4)
+        copy_net = type(self.net)()
         copy_net.load_state_dict(self.net.state_dict())
         if config.use_per:
             replay_memory = PrioritizedReplayMemory(config.max_memory_size)
