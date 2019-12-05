@@ -1,5 +1,7 @@
 import torch
-from dqn import Agent, DQN
+from DQNNet import DQNNet
+from DoubleDQNAgent import DoubleDQNAgent
+from DQNAgent import DQNAgent
 import config
 import os
 
@@ -7,9 +9,12 @@ if config.on_TACC:
     os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def runDemo():
-    dqn = DQN(4)
+    dqn = DQNNet()
     dqn.load_state_dict(torch.load("./80000.pkl", map_location=lambda storage, loc: storage))
-    agent = Agent(dqn)
+    if config.use_double_dqn:
+        agent = DoubleDQNAgent(dqn)
+    else:
+        agent = DQNAgent(dqn)
     agent.test()
 
 

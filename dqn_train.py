@@ -1,4 +1,6 @@
-from dqn import Agent, DQN
+from DQNNet import DQNNet
+from DQNAgent import DQNAgent
+from DoubleDQNAgent import DoubleDQNAgent
 # import torch
 # torch.manual_seed(9001)
 import os
@@ -8,8 +10,11 @@ if config.on_TACC:
     os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def train():
-    dqn = DQN(4)
-    agent = Agent(dqn)
+    dqn = DQNNet()
+    if config.use_double_dqn:
+        agent = DoubleDQNAgent(dqn)
+    else:
+        agent = DQNAgent(dqn)
     agent.train()
 
 
