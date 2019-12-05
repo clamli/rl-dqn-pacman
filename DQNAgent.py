@@ -1,3 +1,4 @@
+import os
 import random
 import torch
 import torch.nn as nn
@@ -16,11 +17,14 @@ FloatTensor = torch.cuda.FloatTensor if config.use_cuda else torch.FloatTensor
 
 class DQNAgent:
 
-    def __init__(self, net: torch.nn.Module):
+    def __init__(self, net: torch.nn.Module, foldname):
         self.game_agent = GamePacmanAgent(config)
         self.net = net
         if config.use_cuda:
             self.net = self.net.cuda()
+        self.foldname = foldname
+        if not os.path.exists(foldname):
+            os.mkdir(foldname)
 
 
     def train(self):
@@ -123,8 +127,9 @@ class DQNAgent:
 
                     optimizer.step()
                     if count % config.save_model_threshold == 0:
-                        torch.save(self.net.state_dict(), './models/model' + str(count) + '.pkl')
-                        save_data({"num_games_lst": num_games_lst, "num_wins_lst": num_wins_lst, "loss_lst": loss_lst, "score_lst": score_lst}, "result" + str(count))
+                        torch.save(self.net.state_dict(), './' + self.foldname + '/model' + str(count) + '.pkl')
+                        save_data({"num_games_lst": num_games_lst, "num_wins_lst": num_wins_lst, "loss_lst": loss_lst,
+                                   "score_lst": score_lst}, './' + self.foldname + "/result" + str(count))
 
                 frame = next_frame
 

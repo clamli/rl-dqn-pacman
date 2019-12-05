@@ -11,10 +11,17 @@ if config.on_TACC:
 
 def train():
     dqn = DQNNet()
+
+    foldname = "model_dqn"
     if config.use_double_dqn:
-        agent = DoubleDQNAgent(dqn)
+        foldname += "_doubleQ"
+    if config.use_per:
+        foldname += "_per"
+
+    if config.use_double_dqn:
+        agent = DoubleDQNAgent(dqn, foldname)
     else:
-        agent = DQNAgent(dqn)
+        agent = DQNAgent(dqn, foldname)
     agent.train()
 
 
