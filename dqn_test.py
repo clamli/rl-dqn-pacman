@@ -10,7 +10,7 @@ if config.on_TACC:
 
 def runDemo():
     dqn = DQNNet()
-    dqn.load_state_dict(torch.load("./model120000.pkl", map_location=lambda storage, loc: storage))
+    dqn.load_state_dict(torch.load("./model190000.pkl"))
     if config.use_double_dqn:
         agent = DoubleDQNAgent(dqn)
     else:

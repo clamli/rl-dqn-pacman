@@ -11,7 +11,6 @@ if config.on_TACC:
 
 def train():
     dqn = DQNNet()
-    dqn.load_state_dict(torch.load("./model120000.pkl", map_location=lambda storage, loc: storage))
 
     foldname = "model_dqn"
     if config.use_double_dqn:

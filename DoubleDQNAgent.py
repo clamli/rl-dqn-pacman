@@ -26,6 +26,8 @@ class DoubleDQNAgent:
         if not os.path.exists(foldname):
             os.mkdir(foldname)
         copy_net = type(self.net)()
+        if config.use_cuda:
+            copy_net = copy_net.cuda()
         copy_net.load_state_dict(self.net.state_dict())
         if config.use_per:
             replay_memory = PrioritizedReplayMemory(config.max_memory_size)
