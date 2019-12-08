@@ -8,9 +8,9 @@ import os
 if config.on_TACC:
     os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-def runDemo():
+def run():
     dqn = DQNNet()
-    dqn.load_state_dict(torch.load("./model190000.pkl"))
+    dqn.load_state_dict(torch.load("<You Model Here>"))
     if config.use_double_dqn:
         agent = DoubleDQNAgent(dqn)
     else:
@@ -20,4 +20,4 @@ def runDemo():
 
 '''run'''
 if __name__ == '__main__':
-    runDemo()
+    run()

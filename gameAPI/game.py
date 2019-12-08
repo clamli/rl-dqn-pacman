@@ -227,6 +227,6 @@ class GamePacmanAgent():
 		pygame.init()
 		pygame.font.init()
 		screen = pygame.display.set_mode([self.screen_width, self.screen_height])
-		pygame.display.set_caption('Pacman-微信公众号:Charles的皮卡丘')
+		pygame.display.set_caption('')
 		font = pygame.font.Font(self.config.font_path, 24)
 		return screen, font

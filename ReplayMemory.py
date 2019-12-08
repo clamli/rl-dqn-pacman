@@ -1,3 +1,7 @@
+"""
+    Modified based on the code: https://github.com/jaara/AI-blog/blob/master/SumTree.py
+"""
+
 import random
 import numpy as np
 import config
