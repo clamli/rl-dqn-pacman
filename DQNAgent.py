@@ -36,10 +36,6 @@ class DQNAgent:
             optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-3)
         mse_loss = nn.MSELoss(reduction='elementwise_mean')
         count = 0
-        num_games = 0
-        num_wins = 0
-        num_games_lst = []
-        num_wins_lst = []
         loss_lst = []
         score_lst = []
         game_round = 1
@@ -81,16 +77,8 @@ class DQNAgent:
             score_lst.append(self.game_agent.score)
             if is_gameover or live_time >= config.timeout:
                 self.game_agent.reset()
-
                 game_round += 1
                 live_time = 0
-
-                if len(replay_memory.memory) >= config.start_training_threshold:
-                    num_games += 1
-                    num_wins += int(is_win)
-                    num_games_lst.append(num_games)
-                    num_wins_lst.append(num_wins)
-
             else:
                 live_time += 1
 
@@ -126,8 +114,7 @@ class DQNAgent:
                 optimizer.step()
                 if count % config.save_model_threshold == 0:
                     torch.save(self.net.state_dict(), './' + foldname + '/model' + str(count) + '.pkl')
-                    save_data({"num_games_lst": num_games_lst, "num_wins_lst": num_wins_lst, "loss_lst": loss_lst,
-                               "score_lst": score_lst}, './' + foldname + "/result" + str(count))
+                    save_data({"loss_lst": loss_lst, "score_lst": score_lst}, './' + foldname + "/result" + str(count))
 
             frame = next_frame
 
